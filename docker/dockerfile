@@ -1,0 +1,20 @@
+# Sử dụng image Python chính thức từ Docker Hub
+FROM python:3.11-slim
+
+# Thiết lập thư mục làm việc trong container
+WORKDIR /app
+
+# Sao chép các tệp trong thư mục hiện tại vào thư mục làm việc của container
+COPY . /app
+
+# Cài đặt các thư viện cần thiết từ requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Cài đặt MySQL connector nếu cần
+RUN pip install mysql-connector
+
+# Expose cổng để có thể kết nối với container nếu cần (chỉ cần nếu có service ngoài Scrapy)
+EXPOSE 5000
+
+# Chạy lệnh khi container được khởi chạy (Scrapy Spider)
+CMD ["scrapy", "crawl", "champions_league"]

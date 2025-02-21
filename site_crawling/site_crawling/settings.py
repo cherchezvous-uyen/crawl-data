@@ -89,7 +89,12 @@ ROBOTSTXT_OBEY = True
 #HTTPCACHE_STORAGE = "scrapy.extensions.httpcache.FilesystemCacheStorage"
 
 
-
 ITEM_PIPELINES = {
-    'site_crawling.pipelines.TxtPipeline': 300,
+    'site_crawling.pipelines.MySQLPipeline': 1,
 }
+
+# Các cấu hình MySQL
+MYSQL_HOST = 'localhost'
+MYSQL_USER = 'root'
+MYSQL_PASSWORD = ''
+MYSQL_DATABASE = 'champions'

@@ -1,62 +1,68 @@
 import mysql.connector
 
 class MySQLPipeline:
-    def open_spider(self, spider):
-        self.conn = mysql.connector.connect(
-            host="localhost", user="root", password="", database="champions"
-        )
-        self.cursor = self.conn.cursor()
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS champions (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                url TEXT,
-                title VARCHAR(255),
-                date VARCHAR(100),
-                author VARCHAR(255),
-                content TEXT,
-                hashtag TEXT
+    def __init__(self):
+        try:
+            self.db_handler = mysql.connector.connect(
+                host='localhost',
+                user='root',
+                password='',
+                database='champions'
             )
-        """)
+            self.cursor = self.db_handler.cursor()
+            print("Kết nối đến MySQL thành công!")
+        except mysql.connector.Error as e:
+            print(f"Lỗi khi kết nối đến MySQL: {e}")
+            raise
 
-    def process_item(self, item, spider):
-        self.cursor.execute("""
-            INSERT INTO champions(url, title, date, author, content, hashtag) 
-            VALUES (%s, %s, %s, %s, %s, %ss)
-        """, (item["url"], item["title"], item["date"], item["author"], 
-              item["content"], item["hashtag"]))
-        self.conn.commit()
-        return item
-
-    def close_spider(self, spider):
-        self.cursor.close()
-        self.conn.close()
-
-# class MongoDBPipeline:
-#     def open_spider(self, spider):
-#         self.client = MongoClient("mongodb://localhost:27017/")
-#         self.db = self.client["vnexpress"]
-#         self.collection = self.db["hosophaan"]
-
-#     def process_item(self, item, spider):
-#         self.collection.insert_one(dict(item))
-#         return item
-
-#     def close_spider(self, spider):
-#         self.client.close()
-
-class TxtPipeline:
     def open_spider(self, spider):
-        self.file = open("vnexpress_hosophaan.txt", "w", encoding="utf-8")
+        try:
+            # Tạo bảng nếu chưa tồn tại
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS champ (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                title VARCHAR(255),
+                url VARCHAR(255),
+                time DATETIME,
+                author VARCHAR(255),
+                category VARCHAR(255),
+                content TEXT,
+                description TEXT,
+                tags TEXT
+            )
+            """
+            self.cursor.execute(create_table_query)
+            self.db_handler.commit()
+            print("Bảng champ đã được tạo hoặc đã tồn tại.")
+        except mysql.connector.Error as e:
+            print(f"Lỗi khi tạo bảng: {e}")
 
     def process_item(self, item, spider):
-        self.file.write(f"url: {item['url']}\n")
-        self.file.write(f"title: {item['title']}\n")
-        self.file.write(f"date: {item['time']}\n")
-        self.file.write(f"author: {item['author']}\n")
-        self.file.write(f"content: {item['content']}\n")
-        self.file.write(f"hashtag: {item['tags']}\n")
-        self.file.write("="*50 + "\n")
+        try:
+            # Chèn dữ liệu vào bảng champ
+            insert_query = """
+            INSERT INTO champ (title, url, time, author, category, content, description, tags)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            data = (
+                item['title'],
+                item['url'],
+                item['time'],
+                item['author'],
+                item['category'],
+                item['content'],
+                item['description'],
+                item['tags']
+            )
+            self.cursor.execute(insert_query, data)
+            self.db_handler.commit()
+            print(f"Đã chèn dữ liệu vào bảng champ: {item['title']}")
+        except mysql.connector.Error as e:
+            print(f"Lỗi khi chèn dữ liệu: {e}")
         return item
 
     def close_spider(self, spider):
-        self.file.close()
+        # Đóng kết nối MySQL khi spider kết thúc
+        self.cursor.close()
+        self.db_handler.close()
+        print("Đã đóng kết nối MySQL.")

@@ -1,60 +1,36 @@
 import scrapy
-import json
-from site_crawling.items import VnexpressSpider
-
-class VnexpressSpider(scrapy.Spider):
-    name = "site_crawling"
+from site_crawling.items import ChampionsLeagueItem
+class ChampionsLeagueSpider(scrapy.Spider):
+    name = "champions_league"
     allowed_domains = ["vnexpress.net"]
     start_urls = ["https://vnexpress.net/bong-da/champions-league"]
+    visited_urls = set()
 
     def parse(self, response):
-        articles = response.css('article.item-news')
+        articles = response.css('article.item-news h2.title-news a::attr(href)').getall()
         if not articles:
-            self.logger.warning("Không tìm thấy bài viết nào!")
-
+            self.logger.warning("Không thấy bài viết")
         for article in articles:
-            title = article.css('h2.title-news a::text').get()
-            url = article.css('h2.title-news a::attr(href)').get()
-            
-            if url:
-                yield response.follow(url, self.parse_article, meta={"title": title, "url": url})
+            yield response.follow(article, self.parse_article)
 
     def parse_article(self, response):
-        item = VnexpressSpider()
+        content = response.xpath('//article//p').xpath('string(.)').getall()
+        clean_content = [text.strip() for text in content if text.strip()]
+        full_text = " ".join(clean_content)
         
-        # Trích xuất JSON-LD (schema.org)
-        json_ld_data = response.xpath('//script[@type="application/ld+json"]/text()').get()
-        if json_ld_data:
-            try:
-                data = json.loads(json_ld_data)
-                
-                # Cập nhật dữ liệu từ JSON-LD
-                item["url"] = data.get("mainEntityOfPage", {}).get("@id", response.url)
-                item["title"] = data.get("headline", "Không có tiêu đề")
-                item["time"] = data.get("datePublished")
-                item["author"] = data.get("author", {}).get("name", "Không rõ")
-                item["category"] = ", ".join(data.get("about", [])) if isinstance(data.get("about"), list) else data.get("about")
-                item["content"] = data.get("description", "").strip()
-                item["tags"] = data.get("keywords", "")
+        # Lấy nội dung description
+        description = response.xpath('//p[@class="description"]/descendant-or-self::text()').getall()
+        description_text = " ".join([desc.strip() for desc in description if desc.strip()])
 
-                item["image_url"] = data.get("image", {}).get("url", "")
-            except json.JSONDecodeError:
-                self.logger.warning("Lỗi phân tích JSON-LD, sử dụng XPath thay thế")
-
-        if not item.get("title"):
-            item["url"] = response.meta["url"]
-            item["title"] = response.meta["title"].strip() if response.meta["title"] else "Không có tiêu đề"
-            item["time"] = response.xpath('//span[@class="date"]/text()').get()
-            item["author"] = response.xpath('//p[@class="author_mail"]/text()').get()
-            item["category"] = response.xpath('//ul[@class="breadcrumb"]/li[last()]/a/text()').get()
-
-            content = response.xpath('//article//p//text()').getall()
-            item["content"] = " ".join([text.strip() for text in content if text.strip()])
-
-            item["tags"] = response.xpath('//meta[@name="keywords"]/@content').get()
-
-        # Trích xuất bình luận
-        comments = response.xpath('//div[@class="content-comment"]/p[@class="full_content"]/text()').getall()
-        item["comments"] = "; ".join([comment.strip() for comment in comments if comment.strip()])
-
+        # Khởi tạo Item
+        item = ChampionsLeagueItem()
+        item['url'] = response.url
+        item['title'] = response.xpath('//h1/text()').get()
+        item['time'] = response.xpath('//meta[@itemprop="datePublished"]/@content').get()
+        item['author'] = response.xpath('//p[@class="author_mail"]/text()').get()
+        item['category'] = response.xpath('//ul[@class="breadcrumb"]/li[last()]/a/text()').get()
+        item['content'] = full_text
+        item['description'] = description_text if description_text else "Không có mô tả"
+        item['tags'] = response.xpath('//meta[@name="keywords"]/@content').get()
+        
         yield item
