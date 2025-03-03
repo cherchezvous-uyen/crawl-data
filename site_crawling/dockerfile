@@ -16,5 +16,5 @@ RUN pip install mysql-connector
 # Expose cổng để có thể kết nối với container nếu cần (chỉ cần nếu có service ngoài Scrapy)
 EXPOSE 5000
 
-# Chạy lệnh khi container được khởi chạy (Scrapy Spider)
+# Chạy Scrapy spider khi container được khởi động
 CMD ["scrapy", "crawl", "champions_league"]

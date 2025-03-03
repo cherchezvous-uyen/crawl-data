@@ -1,0 +1,26 @@
+version: '3'
+services:
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+  scrapy:
+    build: .
+    command: ["scrapy", "crawl", "champions_league"]  # Chạy Scrapy trực tiếp
+    depends_on:
+      - mysql
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+
+volumes:
+  mysql-data:
+  
+networks:
+  app_network:
+    driver: bridge

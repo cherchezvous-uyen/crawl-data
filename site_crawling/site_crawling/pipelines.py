@@ -4,7 +4,7 @@ class MySQLPipeline:
     def __init__(self):
         try:
             self.db_handler = mysql.connector.connect(
-                host='localhost',
+                host='mysql',
                 user='root',
                 password='',
                 database='champions'
